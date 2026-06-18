@@ -182,7 +182,7 @@ class TestAPI:
 
         with patch("src.app.get_model", return_value=mock_pipeline):
             from src.app import app
-            return TestClient(app)
+            yield TestClient(app)
 
     def test_root_endpoint(self, client):
         response = client.get("/")
