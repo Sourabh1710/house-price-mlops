@@ -1,0 +1,20 @@
+# render.yaml - Infrastructure as Code for Render
+
+services:
+  - type: web
+    name: house-price-api
+    runtime: docker                          
+
+    # Pull from Docker Hub instead of building on Render's servers
+    # (faster deploys since it already built in CI)
+    image:
+      url: docker.io/YOUR_DOCKERHUB_USERNAME/house-price-api:latest
+
+    plan: free                               # Render's free tier (spins down after inactivity)
+
+    envVars:
+      - key: MODEL_PATH
+        value: /home/appuser/app/models/best_model.pkl
+
+    healthCheckPath: /health                 # Render polls this to confirm deployment success
+

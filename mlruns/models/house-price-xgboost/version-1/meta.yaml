@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1781770865841
+current_stage: None
+description: null
+last_updated_timestamp: 1781770865841
+name: house-price-xgboost
+run_id: 54ef1716b288497a88672988a9125f7d
+run_link: null
+source: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/54ef1716b288497a88672988a9125f7d/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/54ef1716b288497a88672988a9125f7d/artifacts/model
+user_id: null
+version: 1

@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1781770834593
+current_stage: None
+description: null
+last_updated_timestamp: 1781770834593
+name: house-price-linearregression
+run_id: 761f5173369c4b9ea02d54184ccb74bd
+run_link: null
+source: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/761f5173369c4b9ea02d54184ccb74bd/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/761f5173369c4b9ea02d54184ccb74bd/artifacts/model
+user_id: null
+version: 1

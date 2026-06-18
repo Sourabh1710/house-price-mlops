@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data (large files - store in DVC or S3 instead)
+# data/train.csv      
+# data/test.csv
+
+# ML artifacts
+models/best_model.pkl
+models/submission.csv
+mlruns/              # MLflow local tracking directory
+mlruns_local.json
+*.pkl
+*.joblib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Docker
+.dockerignore
+
+# Secrets 
+.env
+*.pem
+secrets.yaml

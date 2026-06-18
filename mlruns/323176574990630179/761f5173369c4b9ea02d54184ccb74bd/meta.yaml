@@ -1,0 +1,15 @@
+artifact_uri: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/761f5173369c4b9ea02d54184ccb74bd/artifacts
+end_time: 1781770834608
+entry_point_name: ''
+experiment_id: '323176574990630179'
+lifecycle_stage: active
+run_id: 761f5173369c4b9ea02d54184ccb74bd
+run_name: LinearRegression
+run_uuid: 761f5173369c4b9ea02d54184ccb74bd
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1781770803699
+status: 3
+tags: []
+user_id: sourabh
