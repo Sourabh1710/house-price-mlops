@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1781771357727
+current_stage: None
+description: null
+last_updated_timestamp: 1781771357727
+name: house-price-lightgbm
+run_id: 899e72ffa65f409f9bb43550e0117ea1
+run_link: null
+source: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/899e72ffa65f409f9bb43550e0117ea1/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///media/sourabh/Local%20Disk/SOURABH/Projects/Project%204%20MLOPS/mlruns/323176574990630179/899e72ffa65f409f9bb43550e0117ea1/artifacts/model
+user_id: null
+version: 1

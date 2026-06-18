@@ -1,189 +1,145 @@
-<div align="center">
+# House Price Prediction — End-to-End ML Pipeline
 
-#  House Price Prediction API
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-Pipeline-F7931E?style=flat&logo=scikit-learn&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-LightGBM-189AB4?style=flat)
+![MLflow](https://img.shields.io/badge/MLflow-Tracked-0194E2?style=flat&logo=mlflow&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Live-009688?style=flat&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Deployed-2496ED?style=flat&logo=docker&logoColor=white)
+[![CI/CD](https://github.com/Sourabh1710/house-price-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Sourabh1710/house-price-mlops/actions)
 
-**Production ML pipeline - from raw CSV to live REST API in one repo.**
+> **What's this house actually worth - and can a machine prove it, live, right now?**
+> An end-to-end ML system that prices Iowa homes from 79 raw listing features, compares four models honestly with MLflow, and ships through a fully automated CI/CD pipeline to a live API — not a notebook that only runs on my machine.
 
-[![CI/CD](https://github.com/YOUR_USERNAME/house-price-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/YOUR_USERNAME/house-price-mlops/actions)
-[![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)](https://github.com/YOUR_USERNAME/house-price-mlops)
-[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/YOUR_USERNAME/house-price-api)
-[![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-live-009688?logo=fastapi&logoColor=white)](https://YOUR_APP.onrender.com/docs)
-
-[**Live API →**](https://house-price-api-latest-kmxu.onrender.com/docs) · [**MLflow Experiments →**](#experiment-results) · [**Quick Start →**](#quick-start)
-
-</div>
-
----
-
-## What this is
-
-Most ML tutorials end at a `.pkl` file. This one doesn't.
-
-This project takes the [Kaggle House Prices dataset](https://www.kaggle.com/c/house-prices-advanced-regression-techniques) (1,460 houses, 79 features) and builds the full production stack around it: a leak-proof preprocessing pipeline, MLflow experiment tracking across 4 models, a FastAPI service with auto-generated docs, a multi-stage Docker image, and a GitHub Actions pipeline that tests → builds → deploys on every push.
-
-**The live API is one `curl` away:**
-
-```bash
-curl -s -X POST https://YOUR_APP.onrender.com/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "OverallQual": 8,
-    "GrLivArea": 2000,
-    "YearBuilt": 2005,
-    "Neighborhood": "NridgHt",
-    "GarageArea": 550
-  }' | python -m json.tool
-```
-
-```json
-{
-  "predicted_price": 287543.12,
-  "log_prediction": 12.568432,
-  "model_version": "best_model.pkl"
-}
-```
+[Live API ->](https://house-price-api-latest-kmxu.onrender.com/docs) &nbsp;|&nbsp; [What Drives Price ↓](#what-drives-price) &nbsp;|&nbsp; [Results ↓](#results)
 
 ---
 
-## System Architecture
+## The Problem
 
-```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                        TRAINING                                 │
-  │                                                                 │
-  │  train.csv ──► ColumnTransformer ──► 4 Models ──► MLflow UI    │
-  │                │                                                │
-  │                ├─ Numeric:  Median Impute → StandardScaler      │
-  │                └─ Categoric: Mode Impute → OneHotEncoder        │
-  │                                                                 │
-  │  ⚠️  Pipeline fitted on train-only → zero data leakage         │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  best_model.pkl
-  ┌──────────────────────────▼──────────────────────────────────────┐
-  │                        SERVING                                  │
-  │                                                                 │
-  │  POST /predict  →  FastAPI  →  pipeline.predict()  →  expm1()  │
-  │  GET  /health   →  liveness probe (Docker + Render)            │
-  │  GET  /docs     →  Swagger UI (auto-generated)                 │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │
-  ┌──────────────────────────▼──────────────────────────────────────┐
-  │                        CI / CD                                  │
-  │                                                                 │
-  │  git push main                                                  │
-  │       │                                                         │
-  │       ├─► [1] pytest (87% coverage) ──── FAIL? → stop here    │
-  │       ├─► [2] docker build + push to Hub                       │
-  │       └─► [3] render deploy hook → live in ~60s               │
-  └─────────────────────────────────────────────────────────────────┘
-```
+A professional home appraisal costs hundreds of dollars and takes days. An agent pricing a listing 10% too high can watch it sit unsold for weeks; pricing it 10% too low leaves the seller's money on the table. That gap between "what a house is worth" and "what someone guesses it's worth" is exactly why automated valuation models exist at companies like Zillow — and exactly the problem this project is built to solve at a smaller scale: turn 79 raw features about a house into a defensible price estimate, instantly, through an API anyone can call.
+
+The dataset is real home sales from Ames, Iowa — 1,460 houses with known prices, 79 features ranging from square footage to roof material.
+
+![Target distribution](outputs/01_target_distribution.png)
+*Raw sale price is heavily right-skewed (skew = 1.88) — a handful of expensive houses drag the tail. Log-transforming the target (skew drops to 0.12) is the single most impactful preprocessing decision in this project; see [Technical Approach](#technical-approach) for why.*
 
 ---
 
-## Experiment Results
+## Results
 
-Tracked with **MLflow**. Four models, 5-fold CV, scored by RMSLE (log-scale RMSE — the official Kaggle metric for this competition).
+Tracked with MLflow across four models, scored by 5-fold cross-validated RMSLE (the same metric Kaggle uses for this exact competition) on the log-transformed target.
 
-| Rank | Model | CV RMSLE ↓ | Std | Train R² | Notes |
-|------|-------|-----------|-----|----------|-------|
-| 🥇 | **GradientBoosting** | **0.1223** | 0.0105 | 0.9854 | Winner — deployed |
-| 🥈 | Ridge | 0.1392 | 0.0257 | 0.9211 | Best linear model |
-| 🥉 | RandomForest | 0.1446 | 0.0112 | 0.9825 | High variance |
-| 4 | LinearRegression | 0.1550 | 0.0300 | 0.9432 | Baseline |
+| Model | CV RMSLE | Notes |
+|---|---|---|
+| **LinearRegression** | 753026897.8747395 | Baseline, no regularization |
+| **Ridge** | 0.13916191546903675 | Best linear model |
+| **XGBoost** | 0.1209480622904863 | Gradient boosted trees |
+| **LightGBM** | 0.1284309591618807 | 
 
-> **Context:** Kaggle top 10% cutoff ≈ 0.115 RMSLE. This model sits in the **top 25%** of 5,000+ submissions — without any feature engineering beyond standard preprocessing. XGBoost (in `train.py`) pushes this further.
 
-The low Std on GradientBoosting (0.0105) matters as much as the mean — it means the model is **consistent** across folds, not just lucky on one split.
+**Proof it actually works, end to end:** a default 2-story, 2005-built house in the College Creek neighborhood (`OverallQual=8`, `GrLivArea=2000`) returns a live prediction of **$212949.7** from the deployed API - not a notebook output, an actual HTTP response from `https://house-price-api-latest-kmxu.onrender.com/predict`.
 
 ---
 
-## Engineering Decisions
+## What Drives Price
 
-Three choices that separate this from a notebook dump:
+Standard correlation analysis against `SalePrice`, computed directly from the training data:
 
-**1. Pipeline wraps preprocessor + model together**
-Fitting the scaler before cross-validation exposes val-fold statistics to training — data leakage. With sklearn `Pipeline`, the preprocessor re-fits fresh on each CV fold's training split. CV scores are honest. This is the #1 mistake junior candidates make.
+**1. Overall Quality (r = 0.79)** - by far the strongest single signal. This is a human expert's composite 1–10 rating of materials and finish, which makes intuitive sense: it's already doing some of the model's work for it.
 
-**2. Log-transform the target (`np.log1p`)**
-Raw `SalePrice` is right-skewed (a handful of $700K mansions drag the tail). Log-transforming makes residuals nearly normal, which cuts RMSLE by ~15% on linear models. The inverse (`np.expm1`) is applied at prediction time — the API always returns dollar amounts.
+**2. Above-grade living area (r = 0.71)** - square footage matters, unsurprisingly, but it's a weaker signal than quality alone. A small, beautifully finished house can outprice a larger, average one.
 
-**3. `handle_unknown='ignore'` on OneHotEncoder**
-Test data contains neighborhood codes and sale types not seen in training. Instead of crashing, unseen categories silently become all-zero rows. Verified in the test suite with a synthetic "ATLANTIS_NEIGHBORHOOD" category.
+**3. Garage capacity (r = 0.64)** - how many cars the garage fits correlates more strongly with price than the garage's square footage does, suggesting buyers value capacity as a discrete feature, not just raw space.
+
+**4. Neighborhood — a 3.58x gap.** Median price ranges from **$88,000** in Meadow Village to **$315,000** in Northridge Heights. Two houses with identical specs can differ in value by more than three times purely on location.
+
+![Feature correlations](outputs/02_feature_correlations.png)
+*Pearson correlation of the top 15 numeric features against SalePrice. All positive — bigger and better consistently means more expensive, with quality dominating square footage.*
+
+![Neighborhood prices](outputs/03_neighborhood_prices.png)
+*Median sale price by neighborhood. This is exactly why `Neighborhood` is one-hot-encoded rather than dropped — location alone explains a 3.5x swing in value.*
+
+---
+
+## Technical Approach
+
+### Why these specific choices
+
+**I wrapped the preprocessor and model in one sklearn Pipeline.** If I'd fit the scaler or imputer before cross-validation, I'd leak validation-fold statistics into training — a dishonest score. Keeping both steps inside one Pipeline means the preprocessor re-fits fresh on each CV fold's training split, so the numbers in the Results table above are actually trustworthy.
+
+**I log-transformed the target with `np.log1p`.** As the skew numbers above show (1.88 → 0.12), this turns a heavily right-skewed target into something close to normal, which measurably improves every model — not just the linear ones. I apply `np.expm1` at prediction time so the API always returns plain dollar amounts.
+
+**I set `handle_unknown='ignore'` on the OneHotEncoder.** The test set contains neighborhood and sale-type categories the training data never saw. Rather than let the pipeline crash on an unfamiliar value, unseen categories silently become all-zero rows — and I wrote a test that injects a fake "ATLANTIS_NEIGHBORHOOD" category to confirm this actually works, not just that it should.
+
+**I retrain the model fresh inside CI, rather than committing the `.pkl` file to git.** Binary artifacts don't belong in git history. Training fresh on every push also guarantees the model that gets deployed was actually built from the exact code in that commit — not an older file that happened to still be lying around.
+
+**I split a separate `requirements-serve.txt` from the full `requirements.txt`.** The deployed API never imports MLflow, pytest, or httpx — those are training/testing-only tools. Installing the full requirements list into the Docker image was bloating one layer past 600MB and causing push failures; splitting them cut the image down to only what the API actually uses at runtime.
 
 ---
 
 ## Stack
 
-![Python](https://img.shields.io/badge/-Python_3.11-3776AB?logo=python&logoColor=white&style=flat-square)
-![scikit-learn](https://img.shields.io/badge/-scikit--learn-F7931E?logo=scikit-learn&logoColor=white&style=flat-square)
-![XGBoost](https://img.shields.io/badge/-XGBoost-189AB4?style=flat-square)
-![MLflow](https://img.shields.io/badge/-MLflow-0194E2?logo=mlflow&logoColor=white&style=flat-square)
-![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=fastapi&logoColor=white&style=flat-square)
-![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white&style=flat-square)
-![GitHub Actions](https://img.shields.io/badge/-GitHub_Actions-2088FF?logo=github-actions&logoColor=white&style=flat-square)
-![Render](https://img.shields.io/badge/-Render-46E3B7?logo=render&logoColor=white&style=flat-square)
+| Layer | Tools |
+|---|---|
+| Data & EDA | pandas, numpy, matplotlib |
+| Preprocessing | scikit-learn (Pipeline, ColumnTransformer, SimpleImputer, StandardScaler, OneHotEncoder) |
+| Models | scikit-learn (LinearRegression, Ridge), XGBoost, LightGBM |
+| Experiment tracking | MLflow |
+| Model persistence | joblib |
+| API | FastAPI + Pydantic |
+| Containerization | Docker (multi-stage build) |
+| CI/CD | GitHub Actions |
+| Deployment | Render |
 
 ---
 
-## Quick Start
+## Quickstart
 
 ```bash
-# 1. Clone
-git clone https://github.com/YOUR_USERNAME/house-price-mlops
+git clone https://github.com/Sourabh1710/house-price-mlops
 cd house-price-mlops
+
 pip install -r requirements.txt
 
-# 2. Train (with MLflow tracking)
+# Train all 4 models with MLflow tracking (~7-8 min, mostly LightGBM)
 python src/train.py
-mlflow ui                          # → localhost:5000 to compare runs
+mlflow ui          # → localhost:5000 to compare runs
 
-# 3. Serve
-uvicorn src.app:app --reload       # → localhost:8000/docs
+# Launch the API
+uvicorn src.app:app --reload   # → localhost:8000/docs
+```
 
-# 4. Test
+```bash
+# Run the test suite
 pytest tests/ --cov=src -v
 
-# 5. Docker
+# Build and run the production Docker image
 docker build -t house-price-api .
 docker run -p 8000:8000 house-price-api
 ```
 
 ---
 
-## Project Layout
+## Project Structure
 
 ```
-house-price-mlops/
 ├── src/
-│   ├── features.py          # ColumnTransformer — the leak-proof preprocessor
-│   ├── train.py             # MLflow tracking: LinearReg, Ridge, XGBoost, LightGBM
-│   └── app.py               # FastAPI: /predict  /health  /docs
+│   ├── features.py        ← ColumnTransformer pipeline — fit-only-on-train
+│   ├── train.py            ← MLflow tracking across 4 models
+│   └── app.py               ← FastAPI: /predict  /health  /docs
 ├── tests/
-│   └── test_pipeline.py     # 7 tests: leakage, NaN handling, API responses
+│   └── test_pipeline.py    ← leakage, NaN handling, API response tests
+├── notebooks/
+│   └── 01_eda.ipynb         ← the analysis behind every plot in this README
 ├── .github/workflows/
-│   └── ci-cd.yml            # test → docker build → render deploy
-├── Dockerfile               # Multi-stage build (builder + slim runtime)
-├── render.yaml              # Infrastructure-as-code
-└── requirements.txt         # Version-pinned
+│   └── ci-cd.yml             ← test → train → build → push → deploy, on every push
+├── Dockerfile                ← multi-stage build
+├── requirements.txt          ← full deps (training + testing)
+├── requirements-serve.txt    ← slim deps (API only)
+└── render.yaml
 ```
 
 ---
 
-## CI/CD Setup
-
-Three GitHub Secrets needed:
-
-| Secret | Where |
-|--------|-------|
-| `DOCKERHUB_USERNAME` | hub.docker.com → username |
-| `DOCKERHUB_TOKEN` | Docker Hub → Account Settings → Security → New Token |
-| `RENDER_DEPLOY_HOOK_URL` | Render → Service → Settings → Deploy Hook |
-
-Push to `main`. Everything else is automatic.
-
----
-
-<div align="center">
-<sub>Built with the Kaggle House Prices dataset · Ames, Iowa · 1,460 training samples · 79 features</sub>
-</div>
+*Dataset: [House Prices — Advanced Regression Techniques, Kaggle](https://www.kaggle.com/c/house-prices-advanced-regression-techniques) · Ames, Iowa · 1,460 rows · 79 features*
